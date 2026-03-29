@@ -2,16 +2,34 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 ## Getting Started
 
+### Environment Variables
+
+Sensitive or environment-specific values should live in `.env` at the repository root.
+
+An example file is provided in `.env.example`.
+
+Typical setup:
+
+```bash
+cp .env.example .env
+```
+
+Variables used by the project include:
+
+- `OLLAMA_BASE_URL`
+- `OLLAMA_API_KEY`
+- `OLLAMA_MODEL`
+- `BACKEND_PORT`
+- `FRONTEND_PORT`
+- `ALLOW_ORIGINS`
+- `NEXT_PUBLIC_SHOW_COPILOT_DEV_CONSOLE`
+
 First, run the development server:
 
 ```bash
+npm run dev:all
+# or
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
