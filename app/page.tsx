@@ -82,6 +82,20 @@ type SavingsPlanProps = {
   schedule?: SavingsPlanStep[] | string;
 };
 
+type Transaction = {
+  date: string;
+  label?: string;
+  description?: string;
+  amount: number | string;
+  category?: string;
+  account?: string;
+};
+
+type RecentTransactionsProps = {
+  transactions?: Transaction[] | string;
+  anomalies?: string[] | string;
+};
+
 type RenderableMessage = Message & {
   generativeUI?: (() => ReactNode) | ReactNode;
   generativeUIPosition?: "before" | "after";
@@ -102,6 +116,7 @@ const WORKSPACE_VIEW_NAMES = new Set([
   "show_account_snapshot",
   "show_budget_breakdown",
   "show_savings_plan",
+  "show_recent_transactions",
   "confirm_budget_reallocation",
   "confirm_savings_transfer",
 ]);
@@ -195,6 +210,27 @@ function parseSavingsSchedule(value: unknown): SavingsPlanStep[] {
   }
   if (!Array.isArray(nextValue)) return [];
   return nextValue.filter((e): e is SavingsPlanStep => !!e && typeof e === "object");
+}
+
+function parseTransactions(value: unknown): Transaction[] {
+  let nextValue = value;
+  if (typeof nextValue === "string") {
+    try { nextValue = JSON.parse(nextValue); } catch { return []; }
+  }
+  if (!Array.isArray(nextValue)) return [];
+  return nextValue.filter((e): e is Transaction => !!e && typeof e === "object");
+}
+
+function parseAnomalies(value: unknown): string[] {
+  if (typeof value === "string") {
+    try {
+      const parsed = JSON.parse(value);
+      if (Array.isArray(parsed)) return parsed.filter((e): e is string => typeof e === "string");
+    } catch { /* not JSON, treat as single string */ }
+    return value.trim() ? [value] : [];
+  }
+  if (Array.isArray(value)) return value.filter((e): e is string => typeof e === "string");
+  return [];
 }
 
 function pickBalanceFromAccounts(
@@ -554,6 +590,61 @@ function SavingsPlanCard(props: SavingsPlanProps) {
   );
 }
 
+function RecentTransactionsCard(props: RecentTransactionsProps) {
+  const transactions = parseTransactions(props.transactions);
+  const anomalies = parseAnomalies(props.anomalies);
+
+  return (
+    <div className="gen-card">
+      <div className="gen-card-head">
+        <p className="gen-card-title">Transactions récentes</p>
+        <span className="gen-card-chip">Activité</span>
+      </div>
+      <div className="gen-card-body">
+        {anomalies.length > 0 && (
+          <div className="tx-anomalies">
+            {anomalies.map((anomaly, index) => (
+              <p key={`${anomaly}-${index}`} className="tx-anomaly-item">
+                ⚠ {anomaly}
+              </p>
+            ))}
+          </div>
+        )}
+
+        <div className="tx-list">
+          {transactions.map((tx, index) => {
+            const amount = toNumber(tx.amount) ?? 0;
+            const label = tx.label ?? tx.description ?? "—";
+            const isAnomalous = anomalies.some((anomaly) =>
+              anomaly.toLowerCase().includes(label.toLowerCase().slice(0, 10)),
+            );
+
+            return (
+              <div
+                key={`${tx.date}-${label}-${index}`}
+                className={`tx-row${isAnomalous ? " tx-row-anomaly" : ""}`}
+              >
+                <span className="tx-date">{tx.date}</span>
+                <div className="tx-meta">
+                  <span className="tx-label">{label}</span>
+                  {tx.category && <span className="tx-category">{tx.category}</span>}
+                </div>
+                <span className={`tx-amount${amount < 0 ? " neg" : " pos"}`}>
+                  {eur(amount)}
+                </span>
+              </div>
+            );
+          })}
+
+          {transactions.length === 0 && (
+            <p className="tx-empty">Aucune transaction disponible.</p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ============================================================
 // GENERATIVE UI — HITL COMPONENTS
 // ============================================================
@@ -706,6 +797,9 @@ const SUGGESTIONS = [
   { icon: "📊", text: "Bilan du mois et vue budgétaire complète" },
   { icon: "🔄", text: "Proposer une réallocation budget Restaurants" },
   { icon: "🎯", text: "Simuler un plan d'épargne de 10 000 € en 9 mois" },
+  { icon: "🧾", text: "Montre mes 10 dernières transactions et identifie les anomalies" },
+  { icon: "💸", text: "Quel est mon cashflow ce mois-ci, suis-je dans le vert ?" },
+  { icon: "💳", text: "Virer 200 € de mon compte courant vers l'épargne ce soir" },
 ];
 
 const TECH_STACK = [
@@ -821,6 +915,29 @@ export default function Home() {
           .optional(),
       }),
       render: SavingsPlanCard,
+    },
+    [],
+  );
+
+  useComponent(
+    {
+      name: "show_recent_transactions",
+      description: "Affiche les transactions récentes et les anomalies détectées.",
+      parameters: z.object({
+        transactions: z.union([
+          z.string(),
+          z.array(z.object({
+            date: z.string(),
+            label: z.string().optional(),
+            description: z.string().optional(),
+            amount: z.coerce.number(),
+            category: z.string().optional(),
+            account: z.string().optional(),
+          })),
+        ]).optional(),
+        anomalies: z.union([z.string(), z.array(z.string())]).optional(),
+      }),
+      render: RecentTransactionsCard,
     },
     [],
   );
@@ -973,7 +1090,7 @@ export default function Home() {
                   disabled={isLoading}
                 >
                   <span className="suggestion-icon">{item.icon}</span>
-                  <span>{item.text}</span>
+                  <span className="suggestion-text">{item.text}</span>
                 </button>
               ))}
             </div>

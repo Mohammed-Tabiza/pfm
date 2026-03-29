@@ -26,7 +26,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="fr" className={`${displayFont.variable} ${bodyFont.variable} h-full`}>
-      <body className="min-h-full antialiased">
+      <body suppressHydrationWarning className="min-h-full antialiased">
         <Providers>{children}</Providers>
       </body>
     </html>

@@ -73,8 +73,13 @@ Important pour la Generative UI:
   - show_account_snapshot: {month?, totalBalance, checking, savings, creditCard, incomeToDate?, spentToDate?}
   - show_budget_breakdown: {month?, categories: [{category, budgeted, spent}]}
   - show_savings_plan: {targetAmount, months, currentSavings, goalGap, monthlyContribution, projectedTotal, monthlyCapacity?, targetMonth?, alreadyReached?, withinCashflow?, schedule?}
+  - show_recent_transactions: {transactions: [{date, label, amount, category?, account?}], anomalies?: string[]}
   - confirm_budget_reallocation: {fromCategory, toCategory, amount, rationale?}
   - confirm_savings_transfer: {fromAccount, toAccount, amount, date}
+- Si l'utilisateur demande ses transactions récentes ou une détection d'anomalies:
+  1) appelle list_recent_transactions
+  2) analyse les donnees et identifie les anomalies (montants inhabituels, doublons, categories inattendues)
+  3) appelle show_recent_transactions avec les transactions et la liste d'anomalies detaillees
 - Apres un resultat de tool, continue l'analyse de facon concise.
 """
 
